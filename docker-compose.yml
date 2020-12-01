@@ -1,0 +1,76 @@
+version: '3'
+services:
+
+  #MySQL Service
+  posts-test-db:
+    image: mysql:5.7.22
+    container_name: posts-test-db
+    restart: unless-stopped
+    tty: true
+    #ports:
+    #  - "3306:3306"
+    environment:
+      MYSQL_DATABASE: poststest
+      MYSQL_ROOT_PASSWORD: oi34@lSsdo32rSOAdjs
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./docker/database:/root/sample-db
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - posts-test-app-network
+
+  #PHP Service
+  posts-test-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: posts-test-app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    # exclude vendor folder
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - /var/www/vendor
+    networks:
+      - posts-test-app-network
+
+  #Nginx Service
+  posts-test-webserver:
+    image: nginx:alpine
+    container_name: posts-test-webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "9215:80"
+    #  - "9195:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/  
+    networks:
+      - posts-test-app-network
+
+  posts-test-phpmyadmin:
+    container_name: posts-test-phpmyadmin
+    image: "phpmyadmin/phpmyadmin"
+    environment:
+        PMA_HOST: posts-test-db
+    ports:
+      - "9216:80"
+    networks:
+      - posts-test-app-network
+
+
+#Docker Networks
+networks:
+  posts-test-app-network:
+    driver: bridge
+volumes:
+  dbdata:
+    driver: local
